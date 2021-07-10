@@ -40,17 +40,16 @@ fn retrieve_switch_metacritic_games() -> Vec<MetacriticGame> {
 }
 
 fn retrieve_switch_metacritic_games_for_page(page: u32) -> Vec<MetacriticGame> {
-    let client = reqwest::Client::new();
     let url = format!("http://www.metacritic.com/browse/games/release-date/available/switch/name?page={}", page);
-
-    client.get(&url).send().ok().map(|mut resp| parse_metacritic_games(&resp.text().unwrap_or("".to_owned()))).unwrap_or(Vec::new())
+    reqwest::blocking::get(&url).ok().map(|resp| parse_metacritic_games(&resp.text().unwrap_or("".to_owned()))).unwrap_or(Vec::new())
 }
 
 fn parse_metacritic_games(html: &str) -> Vec<MetacriticGame> {
     lazy_static! {
-        static ref GAME_RE: Regex = Regex::new(r####"(?s)<div class="basic_stat product_title">\s*<a href="(.*?)">(.*?)</a>.*?<div class="metascore_w(.*?)">(.*?)</div>.*?<span class="data textscore(.*?)">(.*?)</span>"####).unwrap();
+        static ref GAME_RE: Regex = Regex::new(r####"(?s)<a href="([^"]*?)" class="title"><h3>(.*?)</h3></a>.*?<div class="clamp-metascore">.*?<div class="metascore_w(.*?)">(.*?)</div>.*?<div class="clamp-userscore">.*?<div class="metascore_w(.*?)">(.*?)</div>"####).unwrap();
     }
     GAME_RE.captures_iter(html).map(|m| {
+        println!("Game Match: {:?}", m);
         MetacriticGame {
             name: m[2].trim().to_owned(),
             href: format!("http://www.metacritic.com{}", m[1].trim()).to_owned(),
